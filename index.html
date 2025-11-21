@@ -256,8 +256,8 @@
             pointer-events: none;
         }
     </style>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.bootcdn.net/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -779,15 +779,21 @@
             if (scanning) return;
             
             try {
-                // 请求摄像头权限
+                // 请求摄像头权限 - 添加更多配置选项
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        facingMode: 'environment' // 使用后置摄像头
+                        facingMode: 'environment', // 使用后置摄像头
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
                     }
                 });
                 
                 qrVideo.srcObject = stream;
                 qrVideo.style.display = 'block';
+                
+                // 等待视频元素准备就绪后播放
+                await qrVideo.play();
                 scanning = true;
                 
                 // 更新扫描器样式
@@ -802,7 +808,18 @@
             } catch (error) {
                 console.error("无法访问摄像头:", error);
                 qrScanner.style.borderColor = '#dc3545';
-                lotteryInfo.textContent = "无法访问摄像头，请确保已授予权限";
+                
+                // 提供更详细的错误信息
+                let errorMsg = "无法访问摄像头";
+                if (error.name === 'NotAllowedError') {
+                    errorMsg = "摄像头权限被拒绝，请在浏览器设置中允许使用摄像头";
+                } else if (error.name === 'NotFoundError') {
+                    errorMsg = "未找到摄像头设备";
+                } else if (error.name === 'NotReadableError') {
+                    errorMsg = "摄像头被其他应用占用";
+                }
+                
+                lotteryInfo.textContent = errorMsg;
                 lotteryInfo.style.color = "#dc3545";
             }
         }
@@ -831,15 +848,30 @@
         async function scanQRCode() {
             if (!scanning) return;
             
+            // 检查视频是否已加载
+            if (qrVideo.readyState !== 4) {
+                return;
+            }
+            
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
+            
+            // 确保视频尺寸有效
+            if (qrVideo.videoWidth === 0 || qrVideo.videoHeight === 0) {
+                return;
+            }
             
             // 设置canvas尺寸与视频相同
             canvas.width = qrVideo.videoWidth;
             canvas.height = qrVideo.videoHeight;
             
-            // 将视频帧绘制到canvas
-            context.drawImage(qrVideo, 0, 0, canvas.width, canvas.height);
+            try {
+                // 将视频帧绘制到canvas
+                context.drawImage(qrVideo, 0, 0, canvas.width, canvas.height);
+            } catch (e) {
+                console.error("绘制视频帧失败:", e);
+                return;
+            }
             
             // 获取图像数据
             const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
