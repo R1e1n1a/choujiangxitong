@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>顾客消费抽奖系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', sans-serif;
+        }
+        body {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            text-align: center;
+        }
+        h1 {
+            color: #2575fc;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        .card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .input-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #495057;
+        }
+        input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #2575fc;
+            box-shadow: 0 0 0 3px rgba(37, 117, 252, 0.1);
+        }
+        button {
+            background: #2575fc;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #1b65e0;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(37, 117, 252, 0.3);
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        .result-area {
+            margin-top: 25px;
+            padding: 20px;
+            background: #e9f5ff;
+            border-radius: 10px;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .result-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2575fc;
+            margin: 10px 0;
+            min-height: 40px;
+        }
+        .info-text {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .history {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .history h3 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+        .history-item {
+            padding: 8px 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+        .status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .probability-display {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+        .amount-display {
+            margin-top: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #2575fc;
+        }
+        .progress-container {
+            margin: 15px 0;
+            background: #e9ecef;
+            border-radius: 10px;
+            height: 10px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            background: #28a745;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        .progress-text {
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .qr-scanner {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 20px;
+            border: 2px dashed #2575fc;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        .qr-scanner::before {
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #2575fc;
+            animation: scan 2s linear infinite;
+        }
+        .qr-scanner i {
+            font-size: 48px;
+            color: #2575fc;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        .user-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 8px;
+        }
+        .login-section {
+            margin-bottom: 20px;
+        }
+        .hidden {
+            display: none;
+        }
+        .error-message {
+            color: #dc3545;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>顾客消费抽奖系统</h1>
+        
+        <!-- 登录区域 -->
+        <div class="card login-section" id="loginSection">
+            <h2>手机号登录</h2>
+            <div class="input-group">
+                <label for="phoneInput">请输入您的手机号</label>
+                <input type="tel" id="phoneInput" placeholder="请输入11位手机号" maxlength="11">
+                <div class="error-message" id="phoneError"></div>
+            </div>
+            <button id="loginBtn">登录/注册</button>
+        </div>
+        
+        <!-- 主功能区域 -->
+        <div id="mainSection" class="hidden">
+            <div class="user-info">
+                <span>欢迎，<strong id="userPhone"></strong></span>
+                <button id="logoutBtn" style="width: auto; padding: 8px 15px;">退出登录</button>
+            </div>
+            
+            <div class="card">
+                <div class="qr-scanner" id="qrScanner">
+                    <i class="fas fa-qrcode"></i>
+                </div>
+                
+                <button id="scanQRBtn">扫描小票二维码</button>
+                
+                <div class="manual-input">
+                    <div class="input-group">
+                        <label for="manualAmount">手动输入金额（备用）</label>
+                        <input type="number" id="manualAmount" placeholder="请输入消费金额">
+                    </div>
+                    <button id="addManualAmountBtn">添加消费金额</button>
+                </div>
+                
+                <div class="amount-display" id="totalAmountDisplay">
+                    累计消费金额：0 元
+                </div>
+                
+                <div class="progress-container">
+                    <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+                </div>
+                <div class="progress-text" id="progressText">
+                    抽奖进度：0/50 次
+                </div>
+                
+                <div class="info-text" id="lotteryInfo">
+                    累计消费每满100元可获得一次抽奖机会，最多50次
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="input-group">
+                    <label>剩余抽奖机会</label>
+                    <div id="lotteryCount">0 次</div>
+                </div>
+                
+                <button id="lotteryBtn" disabled>开始抽奖</button>
+                
+                <div class="result-area">
+                    <div>抽奖结果：</div>
+                    <div class="result-text" id="result">等待抽奖...</div>
+                    <div class="info-text" id="resultDetail"></div>
+                    <div class="probability-display" id="probabilityDisplay"></div>
+                </div>
+            </div>
+            
+            <div class="card history">
+                <h3>消费与抽奖历史</h3>
+                <div id="historyList">
+                    <div class="history-item">
+                        <span>暂无记录</span>
+                        <span class="status status-info">无</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API配置 - 请根据您的实际服务器地址修改
+        const API_CONFIG = {
+            BASE_URL: "http://your-server.com/api", // 替换为您的服务器地址
+            ENDPOINTS: {
+                LOGIN: "/auth/login",
+                VALIDATE_QR: "/qr/validate",
+                ADD_CONSUMPTION: "/consumption/add",
+                GET_USER_DATA: "/user/data",
+                LOTTERY: "/lottery/draw"
+            }
+        };
+
+        // 奖品配置
+        const prizes = [
+            { name: "谢谢参与", probability: 40 },
+            { name: "5元优惠券", probability: 25 },
+            { name: "10元优惠券", probability: 15 },
+            { name: "20元优惠券", probability: 10 },
+            { name: "50元优惠券", probability: 6 },
+            { name: "100元优惠券", probability: 3 },
+            { name: "神秘大奖", probability: 1 }
+        ];
+        
+        // 抽奖次数上限
+        const MAX_LOTTERY_COUNT = 50;
+        
+        // DOM元素
+        const phoneInput = document.getElementById('phoneInput');
+        const phoneError = document.getElementById('phoneError');
+        const loginBtn = document.getElementById('loginBtn');
+        const loginSection = document.getElementById('loginSection');
+        const mainSection = document.getElementById('mainSection');
+        const userPhone = document.getElementById('userPhone');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const manualAmountInput = document.getElementById('manualAmount');
+        const scanQRBtn = document.getElementById('scanQRBtn');
+        const addManualAmountBtn = document.getElementById('addManualAmountBtn');
+        const totalAmountDisplay = document.getElementById('totalAmountDisplay');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const lotteryInfo = document.getElementById('lotteryInfo');
+        const lotteryCount = document.getElementById('lotteryCount');
+        const lotteryBtn = document.getElementById('lotteryBtn');
+        const resultText = document.getElementById('result');
+        const resultDetail = document.getElementById('resultDetail');
+        const probabilityDisplay = document.getElementById('probabilityDisplay');
+        const historyList = document.getElementById('historyList');
+        
+        // 状态变量
+        let currentUser = null;
+        let totalAmount = 0;
+        let usedLotteries = 0;
+        let lotteryHistory = [];
+        let consumptionHistory = [];
+        let randomSeed = Date.now();
+
+        // API调用函数
+        async function callAPI(endpoint, method = 'GET', data = null) {
+            const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+            const options = {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            };
+            
+            if (data) {
+                options.body = JSON.stringify(data);
+            }
+            
+            try {
+                const response = await fetch(url, options);
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.message || `API调用失败: ${response.status}`);
+                }
+                
+                return result;
+            } catch (error) {
+                console.error('API调用错误:', error);
+                throw error;
+            }
+        }
+
+        // 用户登录API
+        async function apiLogin(phone) {
+            return await callAPI(API_CONFIG.ENDPOINTS.LOGIN, 'POST', { phone });
+        }
+
+        // 验证二维码API
+        async function apiValidateQR(qrData) {
+            return await callAPI(API_CONFIG.ENDPOINTS.VALIDATE_QR, 'POST', { 
+                qrData,
+                phone: currentUser
+            });
+        }
+
+        // 添加消费记录API
+        async function apiAddConsumption(amount, qrSignature = null) {
+            return await callAPI(API_CONFIG.ENDPOINTS.ADD_CONSUMPTION, 'POST', {
+                phone: currentUser,
+                amount,
+                qrSignature
+            });
+        }
+
+        // 获取用户数据API
+        async function apiGetUserData() {
+            return await callAPI(`${API_CONFIG.ENDPOINTS.GET_USER_DATA}?phone=${currentUser}`);
+        }
+
+        // 抽奖API
+        async function apiLottery(prize) {
+            return await callAPI(API_CONFIG.ENDPOINTS.LOTTERY, 'POST', {
+                phone: currentUser,
+                prize: prize.name,
+                probability: prize.probability
+            });
+        }
+        
+        // 验证手机号格式
+        function validatePhone(phone) {
+            const phoneRegex = /^1[3-9]\d{9}$/;
+            return phoneRegex.test(phone);
+        }
+        
+        // 初始化 - 从API加载数据
+        async function initialize() {
+            // 检查是否有已登录用户
+            const savedUser = localStorage.getItem('currentUser');
+            if (savedUser) {
+                await loginUser(savedUser);
+            }
+        }
+        
+        // 用户登录
+        async function loginUser(phone) {
+            try {
+                showLoading(true);
+                const result = await apiLogin(phone);
+                
+                currentUser = phone;
+                userPhone.textContent = phone;
+                
+                // 加载用户数据
+                await loadUserData();
+                
+                // 更新界面
+                loginSection.classList.add('hidden');
+                mainSection.classList.remove('hidden');
+                updateUI();
+                
+            } catch (error) {
+                console.error("登录失败:", error);
+                phoneError.textContent = "登录失败，请重试";
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // 加载用户数据
+        async function loadUserData() {
+            try {
+                const userData = await apiGetUserData();
+                
+                totalAmount = userData.totalAmount || 0;
+                usedLotteries = userData.usedLotteries || 0;
+                lotteryHistory = userData.lotteryHistory || [];
+                consumptionHistory = userData.consumptionHistory || [];
+                
+            } catch (error) {
+                console.error("加载用户数据失败:", error);
+                // 如果API失败，使用本地存储作为备用
+                const userDataKey = `userData_${currentUser}`;
+                const savedData = localStorage.getItem(userDataKey);
+                
+                if (savedData) {
+                    try {
+                        const data = JSON.parse(savedData);
+                        totalAmount = data.totalAmount || 0;
+                        usedLotteries = data.usedLotteries || 0;
+                        lotteryHistory = data.lotteryHistory || [];
+                        consumptionHistory = data.consumptionHistory || [];
+                    } catch (e) {
+                        console.error("本地数据解析错误:", e);
+                        resetUserData();
+                    }
+                } else {
+                    resetUserData();
+                }
+            }
+        }
+        
+        // 重置用户数据
+        function resetUserData() {
+            totalAmount = 0;
+            usedLotteries = 0;
+            lotteryHistory = [];
+            consumptionHistory = [];
+        }
+        
+        // 用户退出登录
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('currentUser');
+            loginSection.classList.remove('hidden');
+            mainSection.classList.add('hidden');
+            phoneInput.value = '';
+            phoneError.textContent = '';
+        }
+        
+        // 保存用户数据到localStorage（备用）
+        function saveUserDataToLocalStorage() {
+            if (!currentUser) return;
+            
+            const userDataKey = `userData_${currentUser}`;
+            const data = {
+                totalAmount,
+                usedLotteries,
+                lotteryHistory,
+                consumptionHistory
+            };
+            localStorage.setItem(userDataKey, JSON.stringify(data));
+            localStorage.setItem('currentUser', currentUser);
+        }
+        
+        // 计算可获得的抽奖次数
+        function calculateAvailableLotteries() {
+            const potentialLotteries = Math.floor(totalAmount / 100);
+            return Math.min(potentialLotteries, MAX_LOTTERY_COUNT);
+        }
+        
+        // 更新UI显示
+        function updateUI() {
+            totalAmountDisplay.textContent = `累计消费金额：${totalAmount} 元`;
+            
+            const totalLotteries = calculateAvailableLotteries();
+            const remainingLotteries = totalLotteries - usedLotteries;
+            
+            // 更新进度条
+            const progressPercentage = (totalLotteries / MAX_LOTTERY_COUNT) * 100;
+            progressBar.style.width = `${progressPercentage}%`;
+            progressText.textContent = `抽奖进度：${totalLotteries}/${MAX_LOTTERY_COUNT} 次`;
+            
+            lotteryCount.textContent = `${remainingLotteries} 次`;
+            
+            if (remainingLotteries > 0) {
+                lotteryBtn.disabled = false;
+                lotteryInfo.textContent = `您有 ${remainingLotteries} 次抽奖机会`;
+                lotteryInfo.style.color = "#28a745";
+            } else {
+                lotteryBtn.disabled = true;
+                if (totalLotteries >= MAX_LOTTERY_COUNT) {
+                    lotteryInfo.textContent = "抽奖次数已达上限50次";
+                    lotteryInfo.style.color = "#dc3545";
+                } else {
+                    lotteryInfo.textContent = "累计消费每满100元可获得一次抽奖机会，最多50次";
+                    lotteryInfo.style.color = "#6c757d";
+                }
+            }
+            
+            // 更新历史记录
+            updateHistoryDisplay();
+        }
+        
+        // 更高质量的随机数生成器
+        function highQualityRandom() {
+            const cryptoRandom = window.crypto && window.crypto.getRandomValues 
+                ? window.crypto.getRandomValues(new Uint32Array(1))[0] / 0xFFFFFFFF
+                : Math.random();
+            
+            const timeRandom = (Date.now() % 1000) / 1000;
+            const mathRandom = Math.random();
+            
+            randomSeed = (randomSeed * 9301 + 49297) % 233280;
+            const lcgRandom = randomSeed / 233280;
+            
+            return (cryptoRandom + mathRandom + timeRandom + lcgRandom) % 1;
+        }
+        
+        // 执行抽奖
+        function performLottery() {
+            const random = highQualityRandom() * 100;
+            let cumulativeProbability = 0;
+            let selectedPrize = prizes[0];
+            
+            for (const prize of prizes) {
+                cumulativeProbability += prize.probability;
+                if (random <= cumulativeProbability) {
+                    selectedPrize = prize;
+                    break;
+                }
+            }
+            
+            return selectedPrize;
+        }
+        
+        // 更新历史记录显示
+        function updateHistoryDisplay() {
+            historyList.innerHTML = '';
+            
+            const allHistory = [
+                ...consumptionHistory.map(item => ({ ...item, type: 'consumption' })),
+                ...lotteryHistory.map(item => ({ ...item, type: 'lottery' }))
+            ].sort((a, b) => new Date(b.time) - new Date(a.time))
+             .slice(0, 10); // 只显示最近10条
+            
+            if (allHistory.length === 0) {
+                historyList.innerHTML = `
+                    <div class="history-item">
+                        <span>暂无记录</span>
+                        <span class="status status-info">无</span>
+                    </div>
+                `;
+                return;
+            }
+            
+            allHistory.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'history-item';
+                
+                if (item.type === 'consumption') {
+                    historyItem.innerHTML = `
+                        <span>${item.time} - 消费 ${item.amount}元</span>
+                        <span class="status status-info">消费</span>
+                    `;
+                } else {
+                    const isSpecialPrize = item.probability <= 10;
+                    historyItem.innerHTML = `
+                        <span>${item.time} - ${item.prize}</span>
+                        <span class="status ${isSpecialPrize ? 'status-success' : 'status-info'}">
+                            ${isSpecialPrize ? '中奖' : '参与'}
+                        </span>
+                    `;
+                }
+                
+                historyList.appendChild(historyItem);
+            });
+        }
+        
+        // 添加消费记录
+        async function addConsumptionRecord(amount, qrSignature = null) {
+            try {
+                const result = await apiAddConsumption(amount, qrSignature);
+                
+                // 更新本地数据
+                totalAmount = result.totalAmount;
+                
+                const now = new Date();
+                const timeString = now.toLocaleString();
+                
+                consumptionHistory.unshift({
+                    time: timeString,
+                    amount: amount,
+                    qrSignature: qrSignature
+                });
+                
+                // 更新UI
+                updateUI();
+                
+                return true;
+            } catch (error) {
+                console.error("添加消费记录失败:", error);
+                // 如果API失败，使用本地存储作为备用
+                const now = new Date();
+                const timeString = now.toLocaleString();
+                
+                consumptionHistory.unshift({
+                    time: timeString,
+                    amount: amount,
+                    qrSignature: qrSignature
+                });
+                
+                totalAmount += amount;
+                saveUserDataToLocalStorage();
+                updateUI();
+                
+                return false;
+            }
+        }
+        
+        // 添加抽奖记录
+        async function addLotteryRecord(prize) {
+            try {
+                await apiLottery(prize);
+                
+                // 更新本地数据
+                usedLotteries++;
+                
+                const now = new Date();
+                const timeString = now.toLocaleString();
+                
+                lotteryHistory.unshift({
+                    time: timeString,
+                    prize: prize.name,
+                    probability: prize.probability
+                });
+                
+                // 更新UI
+                updateUI();
+                
+                return true;
+            } catch (error) {
+                console.error("记录抽奖结果失败:", error);
+                // 如果API失败，使用本地存储作为备用
+                usedLotteries++;
+                
+                const now = new Date();
+                const timeString = now.toLocaleString();
+                
+                lotteryHistory.unshift({
+                    time: timeString,
+                    prize: prize.name,
+                    probability: prize.probability
+                });
+                
+                saveUserDataToLocalStorage();
+                updateUI();
+                
+                return false;
+            }
+        }
+        
+        // 显示/隐藏加载状态
+        function showLoading(show) {
+            if (show) {
+                document.body.classList.add('loading');
+            } else {
+                document.body.classList.remove('loading');
+            }
+        }
+        
+        // 模拟二维码扫描
+        async function simulateQRScan() {
+            // 模拟扫描过程
+            const qrScanner = document.getElementById('qrScanner');
+            qrScanner.style.borderColor = '#28a745';
+            qrScanner.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            try {
+                // 模拟扫描延迟
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // 模拟扫描到的二维码内容（实际应用中这里应该是真实的二维码数据）
+                // 这里模拟一个有效的二维码数据
+                const mockQRData = {
+                    amount: Math.floor(Math.random() * 500) + 1,
+                    timestamp: Date.now(),
+                    store_id: "store_001",
+                    order_id: `order_${Date.now()}`,
+                    signature: "mock_signature_12345" // 实际应用中应有有效的签名
+                };
+                
+                const qrContent = btoa(JSON.stringify(mockQRData));
+                
+                // 验证二维码
+                const validation = await apiValidateQR(qrContent);
+                
+                if (validation.valid) {
+                    // 显示扫描结果
+                    qrScanner.innerHTML = `
+                        <i class="fas fa-check"></i>
+                        <div style="margin-top:10px;font-size:14px;">扫描成功: ${validation.amount}元</div>
+                    `;
+                    
+                    // 添加消费记录
+                    await addConsumptionRecord(validation.amount, validation.signature);
+                    
+                    lotteryInfo.textContent = `成功添加消费 ${validation.amount} 元`;
+                    lotteryInfo.style.color = "#28a745";
+                } else {
+                    // 显示错误
+                    qrScanner.innerHTML = `
+                        <i class="fas fa-times"></i>
+                        <div style="margin-top:10px;font-size:14px;">${validation.error}</div>
+                    `;
+                    qrScanner.style.borderColor = '#dc3545';
+                    
+                    lotteryInfo.textContent = validation.error;
+                    lotteryInfo.style.color = "#dc3545";
+                }
+            } catch (error) {
+                console.error("二维码扫描失败:", error);
+                qrScanner.innerHTML = `
+                    <i class="fas fa-times"></i>
+                    <div style="margin-top:10px;font-size:14px;">扫描失败</div>
+                `;
+                qrScanner.style.borderColor = '#dc3545';
+                
+                lotteryInfo.textContent = "二维码验证失败，请重试";
+                lotteryInfo.style.color = "#dc3545";
+            } finally {
+                // 恢复扫描器状态
+                setTimeout(() => {
+                    qrScanner.innerHTML = '<i class="fas fa-qrcode"></i>';
+                    qrScanner.style.borderColor = '#2575fc';
+                }, 2000);
+            }
+        }
+        
+        // 事件监听
+        loginBtn.addEventListener('click', () => {
+            const phone = phoneInput.value.trim();
+            
+            if (!validatePhone(phone)) {
+                phoneError.textContent = "请输入有效的11位手机号";
+                return;
+            }
+            
+            phoneError.textContent = "";
+            loginUser(phone);
+        });
+        
+        logoutBtn.addEventListener('click', logout);
+        
+        scanQRBtn.addEventListener('click', () => {
+            simulateQRScan();
+        });
+        
+        addManualAmountBtn.addEventListener('click', async () => {
+            const amount = parseFloat(manualAmountInput.value);
+            
+            if (isNaN(amount) || amount <= 0) {
+                lotteryInfo.textContent = "请输入有效的消费金额";
+                lotteryInfo.style.color = "#dc3545";
+                return;
+            }
+            
+            // 检查是否已达到抽奖次数上限
+            const currentLotteries = calculateAvailableLotteries();
+            if (currentLotteries >= MAX_LOTTERY_COUNT) {
+                lotteryInfo.textContent = "抽奖次数已达上限50次，无法再增加";
+                lotteryInfo.style.color = "#dc3545";
+                return;
+            }
+            
+            const success = await addConsumptionRecord(amount);
+            manualAmountInput.value = '';
+            
+            if (success) {
+                lotteryInfo.textContent = `成功添加消费 ${amount} 元`;
+                lotteryInfo.style.color = "#28a745";
+            } else {
+                lotteryInfo.textContent = "添加消费记录失败（使用本地存储）";
+                lotteryInfo.style.color = "#ffc107";
+            }
+        });
+        
+        lotteryBtn.addEventListener('click', async () => {
+            const totalLotteries = calculateAvailableLotteries();
+            const remainingLotteries = totalLotteries - usedLotteries;
+            
+            if (remainingLotteries <= 0) {
+                resultText.textContent = "抽奖次数已用完";
+                resultDetail.textContent = "请增加消费金额获取更多抽奖机会";
+                return;
+            }
+            
+            // 抽奖动画效果
+            resultText.textContent = "抽奖中...";
+            resultDetail.textContent = "";
+            probabilityDisplay.textContent = "";
+            
+            let count = 0;
+            const maxCount = 30;
+            const interval = setInterval(() => {
+                const randomIndex = Math.floor(highQualityRandom() * prizes.length);
+                resultText.textContent = prizes[randomIndex].name;
+                
+                count++;
+                if (count >= maxCount) {
+                    clearInterval(interval);
+                    
+                    // 最终结果
+                    const prize = performLottery();
+                    resultText.textContent = prize.name;
+                    
+                    // 显示概率信息
+                    probabilityDisplay.textContent = `中奖概率: ${prize.probability}%`;
+                    
+                    if (prize.probability <= 10) {
+                        resultDetail.textContent = "恭喜您获得奖品！";
+                        resultDetail.style.color = "#28a745";
+                    } else {
+                        resultDetail.textContent = "感谢您的参与！";
+                        resultDetail.style.color = "#6c757d";
+                    }
+                    
+                    // 更新抽奖记录
+                    addLotteryRecord(prize);
+                }
+            }, 80);
+        });
+        
+        // 初始化
+        initialize();
+    </script>
+</body>
+</html>
