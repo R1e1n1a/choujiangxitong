@@ -9,7 +9,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // 中间件
-app.use(cors());
+app.use(cors({
+  origin: ['https://r1e1n1a.github.io', 'http://localhost:3000'],
+  credentials: true
+}));
 app.use(bodyParser.json());
 
 // 请求限流配置
