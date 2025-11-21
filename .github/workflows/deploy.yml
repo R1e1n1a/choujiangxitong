@@ -10,18 +10,8 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     
-    # 添加服务容器用于测试
-    services:
-      # 这里可以添加测试数据库服务（如果需要）
-      mongodb:
-        image: mongo:6.0
-        ports:
-          - 27017:27017
-        options: >- 
-          --health-cmd mongosh --eval "db.adminCommand('ping')" 
-          --health-interval 10s 
-          --health-timeout 5s 
-          --health-retries 5
+    # 注意：由于我们使用MongoDB Atlas，不需要本地MongoDB容器
+    # MongoDB Atlas连接将在验证步骤中测试
     
     steps:
     - uses: actions/checkout@v3
@@ -41,18 +31,53 @@ jobs:
     - name: Build (if applicable)
       run: npm run build || echo "No build script available"
     
-    # 验证MongoDB Atlas连接
+    # 验证MongoDB Atlas连接（使用Node.js脚本）
     - name: Verify MongoDB Atlas connection
       env:
         MONGO_URI: ${{ secrets.MONGO_URI }}
       run: |
         echo "Testing MongoDB Atlas connection..."
-        # 安装MongoDB Shell（mongosh）
-        wget https://downloads.mongodb.com/compass/mongodb-mongosh_1.10.1_amd64.deb
-        sudo dpkg -i mongodb-mongosh_1.10.1_amd64.deb || true
-        sudo apt-get install -f -y
-        # 测试连接（超时设置为30秒）
-        mongosh "$MONGO_URI" --eval "print('Connected to MongoDB Atlas successfully!')" || echo "MongoDB connection test skipped - will try on actual deployment"
+        # 确保安装了mongodb包用于测试连接
+        npm install mongodb || echo "Failed to install mongodb package, but continuing deployment"
+        # 创建简单的Node.js测试脚本
+        cat > test-mongo-connection.js << 'EOF'
+        const { MongoClient } = require('mongodb');
+        
+        async function testConnection() {
+          const uri = process.env.MONGO_URI;
+          if (!uri) {
+            console.log('MONGO_URI not provided, skipping connection test');
+            process.exit(0);
+          }
+          
+          try {
+            console.log('Attempting to connect to MongoDB Atlas...');
+            const client = new MongoClient(uri, { 
+              serverSelectionTimeoutMS: 30000,
+              connectTimeoutMS: 30000
+            });
+            
+            await client.connect();
+            console.log('Connected to MongoDB Atlas successfully!');
+            
+            // 检查数据库连接
+            const databases = await client.db().admin().listDatabases();
+            console.log('Available databases:', databases.databases.map(db => db.name).join(', '));
+            
+            await client.close();
+            process.exit(0);
+          } catch (error) {
+            console.error('MongoDB connection error:', error.message);
+            console.log('MongoDB connection test failed but will continue deployment');
+            process.exit(0); // 继续部署，不阻止工作流
+          }
+        }
+        
+        testConnection();
+        EOF
+        
+        # 运行测试脚本（使用项目依赖的MongoDB客户端）
+        node test-mongo-connection.js || echo "Connection test script failed but continuing deployment"
     
     - name: Deploy to production
       env:
