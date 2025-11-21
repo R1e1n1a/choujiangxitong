@@ -10,8 +10,10 @@ const PORT = process.env.PORT || 3000;
 
 // 中间件
 app.use(cors({
-  origin: ['https://r1e1n1a.github.io', 'http://localhost:3000'],
-  credentials: true
+  origin: '*', // 允许所有域名访问，解决跨域问题
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(bodyParser.json());
 
