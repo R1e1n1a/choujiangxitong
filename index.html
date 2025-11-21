@@ -177,19 +177,47 @@
         }
         .qr-scanner {
             position: relative;
-            width: 200px;
-            height: 200px;
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
             margin: 0 auto 20px;
-            border: 2px dashed #2575fc;
+            border: 2px solid #2575fc;
             border-radius: 10px;
             display: flex;
             justify-content: center;
             align-items: center;
             overflow: hidden;
+            background-color: #000;
         }
-        .qr-scanner::before {
-            content: "";
+        #qrVideo {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .scan-overlay {
             position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 200px;
+            height: 200px;
+            margin-left: -100px;
+            margin-top: -100px;
+            border: 2px solid #2575fc;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+        .scan-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 20px solid rgba(0, 0, 0, 0.5);
+        }
+        .scan-line {
+            position: absolute;
+            top: 50%;
+            left: 0;
             width: 100%;
             height: 2px;
             background: #2575fc;
@@ -229,6 +257,7 @@
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -254,18 +283,14 @@
             
             <div class="card">
                 <div class="qr-scanner" id="qrScanner">
-                    <i class="fas fa-qrcode"></i>
+                    <video id="qrVideo"></video>
+                    <div class="scan-frame"></div>
+                    <div class="scan-line"></div>
                 </div>
                 
                 <button id="scanQRBtn">扫描小票二维码</button>
                 
-                <div class="manual-input">
-                    <div class="input-group">
-                        <label for="manualAmount">手动输入金额（备用）</label>
-                        <input type="number" id="manualAmount" placeholder="请输入消费金额">
-                    </div>
-                    <button id="addManualAmountBtn">添加消费金额</button>
-                </div>
+
                 
                 <div class="amount-display" id="totalAmountDisplay">
                     累计消费金额：0 元
@@ -346,9 +371,7 @@
         const mainSection = document.getElementById('mainSection');
         const userPhone = document.getElementById('userPhone');
         const logoutBtn = document.getElementById('logoutBtn');
-        const manualAmountInput = document.getElementById('manualAmount');
         const scanQRBtn = document.getElementById('scanQRBtn');
-        const addManualAmountBtn = document.getElementById('addManualAmountBtn');
         const totalAmountDisplay = document.getElementById('totalAmountDisplay');
         const progressBar = document.getElementById('progressBar');
         const progressText = document.getElementById('progressText');
@@ -745,70 +768,120 @@
             }
         }
         
-        // 模拟二维码扫描
-        async function simulateQRScan() {
-            // 模拟扫描过程
+        // 真实二维码扫描功能
+        let scanning = false;
+        let scanInterval;
+        const qrVideo = document.getElementById('qrVideo');
+        
+        async function startQRScan() {
             const qrScanner = document.getElementById('qrScanner');
-            qrScanner.style.borderColor = '#28a745';
-            qrScanner.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            if (scanning) return;
             
             try {
-                // 模拟扫描延迟
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                // 请求摄像头权限
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment' // 使用后置摄像头
+                    }
+                });
                 
-                // 模拟扫描到的二维码内容（实际应用中这里应该是真实的二维码数据）
-                // 这里模拟一个有效的二维码数据
-                const mockQRData = {
-                    amount: Math.floor(Math.random() * 500) + 1,
-                    timestamp: Date.now(),
-                    store_id: "store_001",
-                    order_id: `order_${Date.now()}`,
-                    signature: "mock_signature_12345" // 实际应用中应有有效的签名
-                };
+                qrVideo.srcObject = stream;
+                qrVideo.style.display = 'block';
+                scanning = true;
                 
-                const qrContent = btoa(JSON.stringify(mockQRData));
+                // 更新扫描器样式
+                qrScanner.style.borderColor = '#28a745';
+                lotteryInfo.textContent = "请对准二维码进行扫描...";
+                lotteryInfo.style.color = "#28a745";
                 
-                // 验证二维码
-                const validation = await apiValidateQR(qrContent);
+                // 开始扫描循环
+                scanInterval = setInterval(() => {
+                    scanQRCode();
+                }, 100);
+            } catch (error) {
+                console.error("无法访问摄像头:", error);
+                qrScanner.style.borderColor = '#dc3545';
+                lotteryInfo.textContent = "无法访问摄像头，请确保已授予权限";
+                lotteryInfo.style.color = "#dc3545";
+            }
+        }
+        
+        function stopQRScan() {
+            if (!scanning) return;
+            
+            scanning = false;
+            
+            // 停止扫描循环
+            if (scanInterval) {
+                clearInterval(scanInterval);
+            }
+            
+            // 停止视频流
+            if (qrVideo.srcObject) {
+                qrVideo.srcObject.getTracks().forEach(track => track.stop());
+                qrVideo.srcObject = null;
+            }
+            
+            // 重置扫描器状态
+            const qrScanner = document.getElementById('qrScanner');
+            qrScanner.style.borderColor = '#2575fc';
+        }
+        
+        async function scanQRCode() {
+            if (!scanning) return;
+            
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            
+            // 设置canvas尺寸与视频相同
+            canvas.width = qrVideo.videoWidth;
+            canvas.height = qrVideo.videoHeight;
+            
+            // 将视频帧绘制到canvas
+            context.drawImage(qrVideo, 0, 0, canvas.width, canvas.height);
+            
+            // 获取图像数据
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            
+            // 使用jsQR库解码二维码
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "dontInvert",
+            });
+            
+            if (code) {
+                // 找到二维码
+                const qrContent = code.data;
                 
-                if (validation.valid) {
-                    // 显示扫描结果
-                    qrScanner.innerHTML = `
-                        <i class="fas fa-check"></i>
-                        <div style="margin-top:10px;font-size:14px;">扫描成功: ${validation.amount}元</div>
-                    `;
+                // 停止扫描
+                stopQRScan();
+                
+                try {
+                    // 验证二维码
+                    const validation = await apiValidateQR(qrContent);
                     
-                    // 添加消费记录
-                    await addConsumptionRecord(validation.amount, validation.signature);
-                    
-                    lotteryInfo.textContent = `成功添加消费 ${validation.amount} 元`;
-                    lotteryInfo.style.color = "#28a745";
-                } else {
-                    // 显示错误
-                    qrScanner.innerHTML = `
-                        <i class="fas fa-times"></i>
-                        <div style="margin-top:10px;font-size:14px;">${validation.error}</div>
-                    `;
-                    qrScanner.style.borderColor = '#dc3545';
-                    
-                    lotteryInfo.textContent = validation.error;
+                    if (validation.valid) {
+                        // 显示扫描结果
+                        lotteryInfo.textContent = `扫描成功: ${validation.amount}元`;
+                        lotteryInfo.style.color = "#28a745";
+                        
+                        // 添加消费记录
+                        await addConsumptionRecord(validation.amount, validation.signature);
+                    } else {
+                        // 显示错误
+                        lotteryInfo.textContent = validation.error;
+                        lotteryInfo.style.color = "#dc3545";
+                    }
+                } catch (error) {
+                    console.error("二维码验证失败:", error);
+                    lotteryInfo.textContent = "二维码验证失败，请重试";
                     lotteryInfo.style.color = "#dc3545";
                 }
-            } catch (error) {
-                console.error("二维码扫描失败:", error);
-                qrScanner.innerHTML = `
-                    <i class="fas fa-times"></i>
-                    <div style="margin-top:10px;font-size:14px;">扫描失败</div>
-                `;
-                qrScanner.style.borderColor = '#dc3545';
                 
-                lotteryInfo.textContent = "二维码验证失败，请重试";
-                lotteryInfo.style.color = "#dc3545";
-            } finally {
-                // 恢复扫描器状态
+                // 2秒后自动恢复扫描状态
                 setTimeout(() => {
-                    qrScanner.innerHTML = '<i class="fas fa-qrcode"></i>';
-                    qrScanner.style.borderColor = '#2575fc';
+                    lotteryInfo.textContent = "累计消费每满100元可获得一次抽奖机会，最多50次";
+                    lotteryInfo.style.color = "#6c757d";
                 }, 2000);
             }
         }
@@ -829,37 +902,16 @@
         logoutBtn.addEventListener('click', logout);
         
         scanQRBtn.addEventListener('click', () => {
-            simulateQRScan();
+            if (scanning) {
+                stopQRScan();
+                scanQRBtn.textContent = "扫描小票二维码";
+            } else {
+                startQRScan();
+                scanQRBtn.textContent = "停止扫描";
+            }
         });
         
-        addManualAmountBtn.addEventListener('click', async () => {
-            const amount = parseFloat(manualAmountInput.value);
-            
-            if (isNaN(amount) || amount <= 0) {
-                lotteryInfo.textContent = "请输入有效的消费金额";
-                lotteryInfo.style.color = "#dc3545";
-                return;
-            }
-            
-            // 检查是否已达到抽奖次数上限
-            const currentLotteries = calculateAvailableLotteries();
-            if (currentLotteries >= MAX_LOTTERY_COUNT) {
-                lotteryInfo.textContent = "抽奖次数已达上限50次，无法再增加";
-                lotteryInfo.style.color = "#dc3545";
-                return;
-            }
-            
-            const success = await addConsumptionRecord(amount);
-            manualAmountInput.value = '';
-            
-            if (success) {
-                lotteryInfo.textContent = `成功添加消费 ${amount} 元`;
-                lotteryInfo.style.color = "#28a745";
-            } else {
-                lotteryInfo.textContent = "添加消费记录失败（使用本地存储）";
-                lotteryInfo.style.color = "#ffc107";
-            }
-        });
+
         
         lotteryBtn.addEventListener('click', async () => {
             const totalLotteries = calculateAvailableLotteries();
