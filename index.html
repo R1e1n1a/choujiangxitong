@@ -1001,17 +1001,6 @@
                         // 显示更详细的错误信息
                         lotteryInfo.textContent = `验证失败: ${error.message || '未知错误'}`;
                         lotteryInfo.style.color = "#dc3545";
-                        
-                        // 如果API调用失败，模拟成功以便测试
-                        console.log('API调用失败，模拟二维码验证成功');
-                        // 这里可以添加模拟数据以便测试
-                        setTimeout(() => {
-                            // 模拟成功结果
-                            lotteryInfo.textContent = "扫描成功: 100元";
-                            lotteryInfo.style.color = "#28a745";
-                            // 模拟添加消费记录
-                            addConsumptionRecord(100, 'mock-signature');
-                        }, 1000);
                     }
                     
                     // 2秒后自动恢复扫描状态
