@@ -1,9 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const qrcode = require('qrcode');
+const Consumption = require('../models/Consumption');
+
+// 存储已验证的二维码签名（生产环境中应使用Redis或数据库）
+const validatedSignatures = new Set();
 
 // 验证二维码
-router.post('/validate', (req, res) => {
+router.post('/validate', async (req, res) => {
   try {
     const { qrData, phone } = req.body; // 接收phone参数
     
@@ -32,6 +36,28 @@ router.post('/validate', (req, res) => {
     if (!isValidSignature) {
       return res.status(400).json({ valid: false, error: '无效的签名' });
     }
+    
+    // 检查签名是否已被验证过（防止重复扫描）
+    if (validatedSignatures.has(decodedData.signature)) {
+      return res.status(400).json({ valid: false, error: '此二维码已被扫描过' });
+    }
+    
+    // 检查数据库中是否已有此签名的消费记录
+    const existingConsumption = await Consumption.findOne({
+      qrSignature: decodedData.signature
+    });
+    
+    if (existingConsumption) {
+      return res.status(400).json({ valid: false, error: '此二维码已被使用过' });
+    }
+    
+    // 将签名添加到已验证集合
+    validatedSignatures.add(decodedData.signature);
+    
+    // 设置签名过期时间（可选，例如1小时后自动移除）
+    setTimeout(() => {
+      validatedSignatures.delete(decodedData.signature);
+    }, 3600000); // 1小时
     
     res.json({
       valid: true,
