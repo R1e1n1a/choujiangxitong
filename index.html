@@ -337,15 +337,16 @@
     </div>
 
     <script>
-        // API配置 - 修改为远程环境地址
+        // API配置
         const API_CONFIG = {
-            BASE_URL: "https://lottery-app-ochre.vercel.app/api", // 远程生产环境地址
+            // 本地开发环境
+            BASE_URL: "https://lottery-app-ochre.vercel.app/api", // 本地开发地址
             ENDPOINTS: {
-                LOGIN: "/auth/login",
-                VALIDATE_QR: "/qr/validate",
-                ADD_CONSUMPTION: "/consumption/add",
-                GET_USER_DATA: "/user/data",
-                LOTTERY: "/lottery/draw"
+                LOGIN: '/api/auth/login',
+                VALIDATE_QR: '/api/qr/validate',
+                ADD_CONSUMPTION: '/api/consumption/add',
+                GET_USER_DATA: '/api/user/data',
+                LOTTERY: '/api/lottery/execute'
             }
         };
 
@@ -392,8 +393,10 @@
         let randomSeed = Date.now();
 
         // API调用函数
-        async function callAPI(endpoint, method = 'GET', data = null) {
-            const url = `${API_CONFIG.BASE_URL}${endpoint}`;
+        async function callAPI(endpoint, data = null, method = 'POST') {
+            // 移除BASE_URL和endpoint之间可能的多余斜杠
+            const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+            const url = API_CONFIG.BASE_URL + normalizedEndpoint;
             const options = {
                 method,
                 headers: {
@@ -406,8 +409,11 @@
             }
             
             try {
+                console.log('API调用:', { url, method, data });
                 const response = await fetch(url, options);
+                console.log('API响应状态:', response.status);
                 const result = await response.json();
+                console.log('API响应数据:', result);
                 
                 if (!response.ok) {
                     throw new Error(result.message || `API调用失败: ${response.status}`);
@@ -416,44 +422,45 @@
                 return result;
             } catch (error) {
                 console.error('API调用错误:', error);
+                alert(`API调用失败: ${error.message}`);
                 throw error;
             }
         }
 
         // 用户登录API
         async function apiLogin(phone) {
-            return await callAPI(API_CONFIG.ENDPOINTS.LOGIN, 'POST', { phone });
+            return await callAPI(API_CONFIG.ENDPOINTS.LOGIN, { phone }, 'POST');
         }
 
         // 验证二维码API
         async function apiValidateQR(qrData) {
-            return await callAPI(API_CONFIG.ENDPOINTS.VALIDATE_QR, 'POST', { 
+            return await callAPI(API_CONFIG.ENDPOINTS.VALIDATE_QR, { 
                 qrData,
                 phone: currentUser
-            });
+            }, 'POST');
         }
 
         // 添加消费记录API
         async function apiAddConsumption(amount, qrSignature = null) {
-            return await callAPI(API_CONFIG.ENDPOINTS.ADD_CONSUMPTION, 'POST', {
+            return await callAPI(API_CONFIG.ENDPOINTS.ADD_CONSUMPTION, {
                 phone: currentUser,
                 amount,
                 qrSignature
-            });
+            }, 'POST');
         }
 
         // 获取用户数据API
         async function apiGetUserData() {
-            return await callAPI(`${API_CONFIG.ENDPOINTS.GET_USER_DATA}?phone=${currentUser}`);
+            return await callAPI(`${API_CONFIG.ENDPOINTS.GET_USER_DATA}?phone=${currentUser}`, {}, 'GET');
         }
 
         // 抽奖API
         async function apiLottery(prize) {
-            return await callAPI(API_CONFIG.ENDPOINTS.LOTTERY, 'POST', {
+            return await callAPI(API_CONFIG.ENDPOINTS.LOTTERY, {
                 phone: currentUser,
                 prize: prize.name,
                 probability: prize.probability
-            });
+            }, 'POST');
         }
         
         // 验证手机号格式
