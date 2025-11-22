@@ -935,93 +935,132 @@
                     // 停止扫描
                     stopQRScan();
                     
-                    try {
-                        // 验证二维码
-                        console.log('开始验证二维码...');
-                        lotteryInfo.textContent = "正在验证二维码信息...";
-                        lotteryInfo.style.color = "#2575fc";
-                        // 检查qrContent是否已经是base64编码的JSON
-                        let qrDataToSend = qrContent;
-                        
-                        // 浏览器兼容的base64解码函数
-                        function decodeBase64(str) {
-                            try {
-                                return decodeURIComponent(atob(str).split('').map(function(c) {
-                                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                                }).join(''));
-                            } catch (e) {
-                                return null;
-                            }
-                        }
-                        
-                        // 浏览器兼容的base64编码函数
-                        function encodeBase64(str) {
-                            try {
-                                return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-                                    return String.fromCharCode('0x' + p1);
-                                }));
-                            } catch (e) {
-                                return null;
-                            }
-                        }
-                        
-                        // 尝试解析，如果失败则创建模拟数据并base64编码（用于测试环境）
-                        try {
-                            // 尝试解码看是否已经是base64
-                            const decoded = decodeBase64(qrContent);
-                            if (decoded) {
-                                JSON.parse(decoded);
-                                // 如果成功解析，说明已经是base64编码，直接使用
-                            } else {
-                                throw new Error('Not base64');
-                            }
-                        } catch (e) {
-                            // 如果不是base64格式，创建模拟数据并编码
-                            console.log('检测到非base64格式，创建模拟数据');
-                            const mockQrData = {
-                                amount: '100',
-                                timestamp: Date.now(),
-                                order_id: `order_${Date.now()}`,
-                                signature: `sig_${Math.random().toString(36).substring(2, 15)}`
-                            };
-                            qrDataToSend = encodeBase64(JSON.stringify(mockQrData));
-                        }
-                        
-                        // 更新提示信息：正在提交验证
-                        lotteryInfo.textContent = "正在提交验证请求...";
-                        lotteryInfo.style.color = "#2575fc";
-                        
-                        const validation = await apiValidateQR(qrDataToSend);
-                        console.log('验证结果:', validation);
-                        
-                        if (validation && validation.valid) {
-                            // 更新提示信息：扫描成功
-                            lotteryInfo.textContent = `扫描成功: ${validation.amount}元`;
-                            lotteryInfo.style.color = "#28a745";
-                            
-                            // 添加消费记录
-                            await addConsumptionRecord(validation.amount, validation.signature);
-                        } else {
-                            // 显示错误
-                            lotteryInfo.textContent = validation?.error || '二维码验证失败';
-                            lotteryInfo.style.color = "#dc3545";
-                        }
-                    } catch (error) {
-                        console.error("二维码验证失败:", error);
-                        // 显示更详细的错误信息
-                        lotteryInfo.textContent = `验证失败: ${error.message || '未知错误'}`;
-                        lotteryInfo.style.color = "#dc3545";
-                    }
-                    
-                    // 2秒后自动恢复扫描状态
-                    setTimeout(() => {
-                        lotteryInfo.textContent = "累计消费每满100元可获得一次抽奖机会，最多50次";
-                        lotteryInfo.style.color = "#6c757d";
-                    }, 2000);
+                    // 处理二维码验证逻辑
+                    await processQRCode(qrContent);
                 }
             } catch (scanError) {
                 console.error('二维码扫描过程中出错:', scanError);
                 // 不中断扫描循环，继续尝试
+            }
+        }
+        
+        // 处理二维码验证逻辑
+        async function processQRCode(qrContent) {
+            try {
+                // 验证二维码
+                console.log('开始验证二维码...');
+                lotteryInfo.textContent = "正在验证二维码信息...";
+                lotteryInfo.style.color = "#2575fc";
+                
+                // 检查qrContent是否已经是base64编码的JSON
+                let qrDataToSend = qrContent;
+                
+                // 浏览器兼容的base64解码函数
+                function decodeBase64(str) {
+                    try {
+                        return decodeURIComponent(atob(str).split('').map(function(c) {
+                            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                        }).join(''));
+                    } catch (e) {
+                        return null;
+                    }
+                }
+                
+                // 浏览器兼容的base64编码函数
+                function encodeBase64(str) {
+                    try {
+                        return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+                            return String.fromCharCode('0x' + p1);
+                        }));
+                    } catch (e) {
+                        return null;
+                    }
+                }
+                
+                // 尝试解析，如果失败则创建模拟数据并base64编码（用于测试环境）
+                try {
+                    // 尝试解码看是否已经是base64
+                    const decoded = decodeBase64(qrContent);
+                    if (decoded) {
+                        JSON.parse(decoded);
+                        // 如果成功解析，说明已经是base64编码，直接使用
+                    } else {
+                        throw new Error('Not base64');
+                    }
+                } catch (e) {
+                    // 如果不是base64格式，创建模拟数据并编码
+                    console.log('检测到非base64格式，创建模拟数据');
+                    const mockQrData = {
+                        amount: '100',
+                        timestamp: Date.now(),
+                        order_id: `order_${Date.now()}`,
+                        signature: `sig_${Math.random().toString(36).substring(2, 15)}`
+                    };
+                    qrDataToSend = encodeBase64(JSON.stringify(mockQrData));
+                }
+                
+                // 更新提示信息：正在提交验证
+                lotteryInfo.textContent = "正在提交验证请求...";
+                lotteryInfo.style.color = "#2575fc";
+                
+                // 修改API调用，避免alert干扰
+                const validation = await validateQRCodeWithAPI(qrDataToSend);
+                console.log('验证结果:', validation);
+                
+                if (validation && validation.valid) {
+                    // 更新提示信息：扫描成功
+                    lotteryInfo.textContent = `扫描成功: ${validation.amount}元`;
+                    lotteryInfo.style.color = "#28a745";
+                    
+                    // 添加消费记录
+                    await addConsumptionRecord(validation.amount, validation.signature);
+                } else {
+                    // 显示错误
+                    lotteryInfo.textContent = validation?.error || '二维码验证失败';
+                    lotteryInfo.style.color = "#dc3545";
+                }
+            } catch (error) {
+                console.error("二维码验证失败:", error);
+                // 显示更详细的错误信息
+                lotteryInfo.textContent = `验证失败: ${error.message || '未知错误'}`;
+                lotteryInfo.style.color = "#dc3545";
+            } finally {
+                // 2秒后自动恢复扫描状态
+                setTimeout(() => {
+                    lotteryInfo.textContent = "累计消费每满100元可获得一次抽奖机会，最多50次";
+                    lotteryInfo.style.color = "#6c757d";
+                }, 2000);
+            }
+        }
+        
+        // 改进的二维码验证API调用，避免alert干扰
+        async function validateQRCodeWithAPI(qrData) {
+            try {
+                // 移除BASE_URL和endpoint之间可能的多余斜杠
+                const normalizedEndpoint = API_CONFIG.ENDPOINTS.VALIDATE_QR.startsWith('/') ? API_CONFIG.ENDPOINTS.VALIDATE_QR : '/' + API_CONFIG.ENDPOINTS.VALIDATE_QR;
+                const url = API_CONFIG.BASE_URL + normalizedEndpoint;
+                
+                console.log('验证二维码API调用:', { url, data: { qrData, phone: currentUser } });
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ qrData, phone: currentUser })
+                });
+                
+                console.log('验证二维码API响应状态:', response.status);
+                const result = await response.json();
+                console.log('验证二维码API响应数据:', result);
+                
+                if (!response.ok) {
+                    return { valid: false, error: result.message || `验证失败: ${response.status}` };
+                }
+                
+                return result;
+            } catch (error) {
+                console.error('验证二维码API调用错误:', error);
+                return { valid: false, error: `网络错误: ${error.message}` };
             }
         }
         
