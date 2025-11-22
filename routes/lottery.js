@@ -20,7 +20,7 @@ const MAX_LOTTERY_COUNT = 50;
 // 执行抽奖（完全在服务器端执行）
 router.post('/draw', async (req, res) => {
   try {
-    const { phone } = req.body;
+    const { phone, prizeName } = req.body;
     
     if (!phone) {
       return res.status(400).json({ message: '缺少手机号参数' });
@@ -41,24 +41,28 @@ router.post('/draw', async (req, res) => {
       return res.status(400).json({ message: '没有抽奖机会了' });
     }
     
-    // 完全在服务器端执行抽奖逻辑，使用更安全的随机数生成
-    // 结合时间戳和随机数生成高质量随机值
-    const generateSecureRandom = () => {
-      const timeFactor = (Date.now() % 10000) / 10000;
-      const mathRandom = Math.random();
-      return (timeFactor * 0.7 + mathRandom * 0.3) % 1;
-    };
+    // 从前端传来的奖品名称查找对应的奖品配置
+    let selectedPrize = prizes.find(p => p.name === prizeName);
     
-    // 执行抽奖
-    const random = generateSecureRandom() * 100;
-    let cumulativeProbability = 0;
-    let selectedPrize = null;
-    
-    for (const p of prizes) {
-      cumulativeProbability += p.probability;
-      if (random <= cumulativeProbability) {
-        selectedPrize = p;
-        break;
+    // 如果找不到或前端没有传递奖品名称，则使用服务器端计算
+    if (!selectedPrize) {
+      // 结合时间戳和随机数生成高质量随机值
+      const generateSecureRandom = () => {
+        const timeFactor = (Date.now() % 10000) / 10000;
+        const mathRandom = Math.random();
+        return (timeFactor * 0.7 + mathRandom * 0.3) % 1;
+      };
+      
+      // 执行抽奖
+      const random = generateSecureRandom() * 100;
+      let cumulativeProbability = 0;
+      
+      for (const p of prizes) {
+        cumulativeProbability += p.probability;
+        if (random <= cumulativeProbability) {
+          selectedPrize = p;
+          break;
+        }
       }
     }
     

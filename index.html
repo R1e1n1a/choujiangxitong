@@ -459,8 +459,7 @@
         async function apiLottery(prize) {
             return await callAPI(API_CONFIG.ENDPOINTS.LOTTERY, {
                 phone: currentUser,
-                prize: prize.name,
-                probability: prize.probability
+                prizeName: prize.name
             }, 'POST');
         }
         

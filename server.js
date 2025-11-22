@@ -1,3 +1,6 @@
+// 设置时区为UTC+8（中国标准时间）
+process.env.TZ = 'Asia/Shanghai';
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
