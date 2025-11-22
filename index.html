@@ -820,7 +820,7 @@
                 qrScanner.style.borderColor = '#28a745';
                 qrScanner.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
                 lotteryInfo.textContent = "请对准二维码进行扫描...";
-                lotteryInfo.style.color = "#28a745";
+                lotteryInfo.style.color = "#2575fc";
                 
                 // 开始扫描循环，降低扫描频率以提高性能
                 scanInterval = setInterval(() => {
@@ -922,6 +922,10 @@
                     const qrContent = code.data;
                     console.log('扫描到的二维码内容:', qrContent);
                     
+                    // 更新提示信息：识别到二维码
+                    lotteryInfo.textContent = "已识别二维码，正在处理...";
+                    lotteryInfo.style.color = "#2575fc";
+                    
                     // 震动反馈（如果设备支持）
                     if (navigator.vibrate) {
                         navigator.vibrate(100);
@@ -934,6 +938,8 @@
                     try {
                         // 验证二维码
                         console.log('开始验证二维码...');
+                        lotteryInfo.textContent = "正在验证二维码信息...";
+                        lotteryInfo.style.color = "#2575fc";
                         // 检查qrContent是否已经是base64编码的JSON
                         let qrDataToSend = qrContent;
                         
@@ -981,11 +987,15 @@
                             qrDataToSend = encodeBase64(JSON.stringify(mockQrData));
                         }
                         
+                        // 更新提示信息：正在提交验证
+                        lotteryInfo.textContent = "正在提交验证请求...";
+                        lotteryInfo.style.color = "#2575fc";
+                        
                         const validation = await apiValidateQR(qrDataToSend);
                         console.log('验证结果:', validation);
                         
                         if (validation && validation.valid) {
-                            // 显示扫描结果
+                            // 更新提示信息：扫描成功
                             lotteryInfo.textContent = `扫描成功: ${validation.amount}元`;
                             lotteryInfo.style.color = "#28a745";
                             
