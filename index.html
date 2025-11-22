@@ -256,8 +256,8 @@
             pointer-events: none;
         }
     </style>
-    <link rel="stylesheet" href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.bootcdn.net/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 </head>
 <body>
     <div class="container">
@@ -337,9 +337,9 @@
     </div>
 
     <script>
-        // API配置 - 已注释本地开发地址，请根据实际部署的API服务器地址修改
+        // API配置 - 修改为本地开发地址
         const API_CONFIG = {
-            BASE_URL: "https://lottery-app-ochre.vercel.app/api", // 请替换为实际部署的API服务器地址，例如：https://your-api-server.com/api
+            BASE_URL: "http://localhost:3000/api", // 本地开发环境地址
             ENDPOINTS: {
                 LOGIN: "/auth/login",
                 VALIDATE_QR: "/qr/validate",
@@ -779,21 +779,15 @@
             if (scanning) return;
             
             try {
-                // 请求摄像头权限 - 添加更多配置选项
+                // 请求摄像头权限
                 const stream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        facingMode: 'environment', // 使用后置摄像头
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        frameRate: { ideal: 30 }
+                        facingMode: 'environment' // 使用后置摄像头
                     }
                 });
                 
                 qrVideo.srcObject = stream;
                 qrVideo.style.display = 'block';
-                
-                // 等待视频元素准备就绪后播放
-                await qrVideo.play();
                 scanning = true;
                 
                 // 更新扫描器样式
@@ -808,18 +802,7 @@
             } catch (error) {
                 console.error("无法访问摄像头:", error);
                 qrScanner.style.borderColor = '#dc3545';
-                
-                // 提供更详细的错误信息
-                let errorMsg = "无法访问摄像头";
-                if (error.name === 'NotAllowedError') {
-                    errorMsg = "摄像头权限被拒绝，请在浏览器设置中允许使用摄像头";
-                } else if (error.name === 'NotFoundError') {
-                    errorMsg = "未找到摄像头设备";
-                } else if (error.name === 'NotReadableError') {
-                    errorMsg = "摄像头被其他应用占用";
-                }
-                
-                lotteryInfo.textContent = errorMsg;
+                lotteryInfo.textContent = "无法访问摄像头，请确保已授予权限";
                 lotteryInfo.style.color = "#dc3545";
             }
         }
@@ -848,30 +831,15 @@
         async function scanQRCode() {
             if (!scanning) return;
             
-            // 检查视频是否已加载
-            if (qrVideo.readyState !== 4) {
-                return;
-            }
-            
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
-            
-            // 确保视频尺寸有效
-            if (qrVideo.videoWidth === 0 || qrVideo.videoHeight === 0) {
-                return;
-            }
             
             // 设置canvas尺寸与视频相同
             canvas.width = qrVideo.videoWidth;
             canvas.height = qrVideo.videoHeight;
             
-            try {
-                // 将视频帧绘制到canvas
-                context.drawImage(qrVideo, 0, 0, canvas.width, canvas.height);
-            } catch (e) {
-                console.error("绘制视频帧失败:", e);
-                return;
-            }
+            // 将视频帧绘制到canvas
+            context.drawImage(qrVideo, 0, 0, canvas.width, canvas.height);
             
             // 获取图像数据
             const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -884,13 +852,16 @@
             if (code) {
                 // 找到二维码
                 const qrContent = code.data;
+                console.log('扫描到的二维码内容:', qrContent); // 添加调试信息
                 
                 // 停止扫描
                 stopQRScan();
                 
                 try {
                     // 验证二维码
+                    console.log('开始验证二维码...');
                     const validation = await apiValidateQR(qrContent);
+                    console.log('验证结果:', validation);
                     
                     if (validation.valid) {
                         // 显示扫描结果
@@ -901,12 +872,13 @@
                         await addConsumptionRecord(validation.amount, validation.signature);
                     } else {
                         // 显示错误
-                        lotteryInfo.textContent = validation.error;
+                        lotteryInfo.textContent = validation.error || '二维码验证失败';
                         lotteryInfo.style.color = "#dc3545";
                     }
                 } catch (error) {
                     console.error("二维码验证失败:", error);
-                    lotteryInfo.textContent = "二维码验证失败，请重试";
+                    // 显示更详细的错误信息
+                    lotteryInfo.textContent = `验证失败: ${error.message || '未知错误'}`;
                     lotteryInfo.style.color = "#dc3545";
                 }
                 

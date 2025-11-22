@@ -5,7 +5,7 @@ const qrcode = require('qrcode');
 // 验证二维码
 router.post('/validate', (req, res) => {
   try {
-    const { qrData } = req.body;
+    const { qrData, phone } = req.body; // 接收phone参数
     
     // 解码base64编码的二维码数据
     let decodedData;
